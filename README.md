@@ -6,6 +6,7 @@ Hơn nữa, tốc độ truy cập giảm đáng kể khi ta sử dụng vpn hay
 Do vậy, với nhu cầu, tình hình hiện tại, tôi đã nảy ra ý tưởng này. Và đây là sản phẩm
 - Trước tiên, chúng ta cần tìm hiểu xem ISP, Công ty,.. họ đã chặn truy cập như thế nào:
  * Họ không chặn qua IP của trang web mà ta truy cập tới (chặn IP mà IP nó của cloudflare thì chết =)) )
+ * Họ không chặn dns, chắc họ biết là chặn dns thì còn có dns-over-https =))
  * Với HTTP, điều này không khó, mọi thứ ở dạng rõ, họ chặn qua `Host` header
  * Với HTTPS, họ không thể lấy Header của ta được, họ chặn qua SNI (ở bước Hello server của ta, làm gián đoạn quá trình bắt tay này), vậy nếu ta thay đổi chuỗi SNI này, họ sẽ không chặn ta nữa. Trước đó, tôi có đọc được một bài viết của một cậu học sinh cấp 3, cậu ta vượt qua filter SNI của hệ thống mạng wifi trên máy bay (hiện tại bài viết đã bị xóa bỏ, cả ở trên wayback machine) khiến cho tôi càng muốn một cách dễ dàng hơn để thực hiện điều này.
 
