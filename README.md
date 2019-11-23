@@ -22,7 +22,7 @@ Do vậy, với nhu cầu, tình hình hiện tại, tôi đã nảy ra ý tư�
 - Chạy phần mềm của tôi, bạn có thể thêm `-h` để xem các options
 - Thay đổi proxy của trình duyệt hay hệ thống: Cấu hình foxyproxy như ảnh dưới đây
 ![image](https://user-images.githubusercontent.com/8877695/69479251-c040a280-0e2d-11ea-9564-f8cd757c1879.png)
-- Sử cấu hình này
+- Sử dụng cấu hình này
 - Truy cập trang web mà bạn muốn (sử dụng https:// )
 ## Video hướng dẫn
 - updating
