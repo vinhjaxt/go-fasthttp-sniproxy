@@ -11,7 +11,7 @@ Do vậy, với nhu cầu, tình hình hiện tại, tôi đã nảy ra ý tư�
 
 # Sử dụng
 ## Yêu cầu đơn giản nhất
-- Bạn đã tải về phần mềm của tôi ở mục Releases
+- Bạn đã tải về phần mềm của tôi ở mục [Releases](https://github.com/vinhjaxt/go-fasthttp-sniproxy/releases)
 - Bạn có Extension để thay đổi Proxy trên Chrome hoặc Firefox (khuyên dùng foxyproxy)
 - Có một số kiến thức liên quan (hoặc nhờ người bạn xã hội nào đó =))) )
 ## Các bước thực hiện
