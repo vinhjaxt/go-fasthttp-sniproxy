@@ -29,3 +29,7 @@ Do vậy, với nhu cầu, tình hình hiện tại, tôi đã nảy ra ý tư�
 # Thông tin thêm
 - Vì thay đổi SNI nên cert của trang web trả về đôi khi sẽ không đúng với tên miền ta cần, nên bạn có thể thay đổi file `domains-certs.json` để định nghĩa các alias domain cho việc verify
 - Sử dụng `-k` để bỏ qua việc verify này (chú ý MITM)
+
+# Credits and Thanks
+- Thank to @eternal-flame-AD https://github.com/eternal-flame-AD/go-pixiv
+- Thank to @elazarl https://github.com/elazarl/goproxy
