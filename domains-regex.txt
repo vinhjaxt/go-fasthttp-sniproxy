@@ -1,2 +1,4 @@
 \.telegram\.org$
 ^telegram\.org$
+.
+
