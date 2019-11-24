@@ -47,8 +47,8 @@ func getUsableIP(hostname, port string) (string, error) {
 			continue
 		}
 		conn, err := httpsDialer.Dial("tcp", "["+ip+"]:"+port)
-		conn.Close()
 		if err == nil {
+			conn.Close()
 			return ip, nil
 		}
 	}
