@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/valyala/fasthttp"
+	"golang.org/x/net/publicsuffix"
 )
 
 var httpClient = &fasthttp.Client{
@@ -139,20 +140,50 @@ var defaultTLSConfig = &tls.Config{
 	InsecureSkipVerify: true,
 }
 
+func genCertHostnames(hostname string) ([]string, string) {
+	mainDomain, err := publicsuffix.EffectiveTLDPlusOne(hostname)
+	if err != nil {
+		return []string{hostname}, hostname
+	}
+	if mainDomain == hostname {
+		return []string{hostname, "*." + hostname}, hostname
+	}
+	var hostnames []string
+	start := 0
+	for {
+		index := strings.IndexByte(hostname[start:], byte('.'))
+		if index == -1 {
+			break
+		}
+		start += index + 1
+		subdomain := hostname[start:]
+		hostnames = append(hostnames, "*."+subdomain)
+		if subdomain == mainDomain {
+			hostnames = append(hostnames, subdomain)
+			break
+		}
+	}
+	hostnames = append(hostnames, "*."+hostname)
+	return hostnames, hostnames[0]
+}
+
 func TLSConfigFromCA(ca *tls.Certificate, hostname string) (*tls.Config, error) {
 	var err error
+	hostnames, key := genCertHostnames(hostname)
 	certCacheLock.RLock()
-	cert, ok := certCache[hostname]
+	cert, ok := certCache[key]
 	certCacheLock.RUnlock()
 	config := *defaultTLSConfig
 	if ok == false {
-		cert, err = signHost(*ca, []string{hostname})
+		cert, err = signHost(*ca, hostnames)
 		if err != nil {
 			return nil, err
 		}
-		certCacheLock.Lock()
-		certCache[hostname] = cert
-		certCacheLock.Unlock()
+		for _, key = range hostnames {
+			certCacheLock.Lock()
+			certCache[key] = cert
+			certCacheLock.Unlock()
+		}
 	}
 	config.Certificates = append(config.Certificates, *cert)
 	return &config, nil

@@ -23,15 +23,15 @@ import (
 var domainNameRegex = regexp.MustCompile(`^([a-zA-Z0-9_]{1}[a-zA-Z0-9_-]{0,62}){1}(\.[a-zA-Z0-9_]{1}[a-zA-Z0-9_-]{0,62})*[\._]?$`)
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-var httpsDialer = &net.Dialer{
-	Timeout:   7 * time.Second,
-	KeepAlive: 5 * 60 * time.Second,
-	DualStack: true,
+var uncatchRecover = func() {
+	if r := recover(); r != nil {
+		log.Println("Uncatched error:", r, string(debug.Stack()))
+	}
 }
 
 func httpsHandler(ctx *fasthttp.RequestCtx, hostname, dialStr string) error {
 	var ioFrom net.Conn
-	destConn, err := httpsDialer.Dial("tcp", dialStr)
+	destConn, err := fasthttp.DialDualStackTimeout(dialStr, 7*time.Second)
 	if err != nil {
 		return err
 	}
@@ -47,9 +47,9 @@ func httpsHandler(ctx *fasthttp.RequestCtx, hostname, dialStr string) error {
 			ioFrom = destConnTLS
 		} else {
 			// return err
-			log.Println("Dest handshake:", hostname, err)
+			log.Println("Remote handshake:", hostname, err)
 			// fallback
-			ioFrom, err = httpsDialer.Dial("tcp", dialStr)
+			ioFrom, err = fasthttp.DialDualStackTimeout(dialStr, 7*time.Second)
 			if err != nil {
 				return err
 			}
@@ -64,7 +64,7 @@ func httpsHandler(ctx *fasthttp.RequestCtx, hostname, dialStr string) error {
 	}
 	ctx.SetStatusCode(fasthttp.StatusOK)
 	ctx.Response.Header.Set("Connection", "keep-alive")
-	ctx.Response.Header.Set("Keep-Alive", "timeout=10, max=10")
+	ctx.Response.Header.Set("Keep-Alive", "timeout=120, max=5")
 	ctx.Hijack(func(clientConn net.Conn) {
 		var ioTo net.Conn
 		if isMustProxify {
@@ -76,7 +76,7 @@ func httpsHandler(ctx *fasthttp.RequestCtx, hostname, dialStr string) error {
 			clientConnTLS := tls.Server(clientConn, tlsConfig)
 			err = clientConnTLS.Handshake()
 			if err != nil {
-				log.Println("TLSHandshake", hostname, err)
+				log.Println("Client handshake", hostname, err)
 				return
 			}
 			ioTo = clientConnTLS
@@ -90,7 +90,9 @@ func httpsHandler(ctx *fasthttp.RequestCtx, hostname, dialStr string) error {
 }
 
 func ioTransfer(destination io.WriteCloser, source io.ReadCloser) {
-	defer recover()
+	defer destination.Close()
+	defer source.Close()
+	defer uncatchRecover()
 	_, err := io.Copy(destination, source)
 	if err != nil {
 		if err != io.EOF {
@@ -103,11 +105,7 @@ var cacheIPMapLock sync.RWMutex
 var cacheIPMap = map[string]string{}
 
 func requestHandler(ctx *fasthttp.RequestCtx) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Println(r, string(debug.Stack()))
-		}
-	}()
+	defer uncatchRecover()
 	// Some library must set header: Connection: keep-alive
 	// ctx.Response.Header.Del("Connection")
 	// ctx.Response.ConnectionClose() // ==> false

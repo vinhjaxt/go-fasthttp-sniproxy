@@ -46,7 +46,7 @@ func getUsableIP(hostname, port string) (string, error) {
 		if ipp := net.ParseIP(ip); ipp == nil || isPrivateIP(ipp) {
 			continue
 		}
-		conn, err := httpsDialer.Dial("tcp", "["+ip+"]:"+port)
+		conn, err := fasthttp.DialDualStackTimeout("["+ip+"]:"+port, 5*time.Second)
 		if err == nil {
 			conn.Close()
 			return ip, nil
