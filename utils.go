@@ -48,6 +48,8 @@ var httpClient = &fasthttp.Client{
 	},
 }
 
+var errEncodingNotSupported = errors.New("response content encoding not supported")
+
 func getResponseBody(resp *fasthttp.Response) ([]byte, error) {
 	var contentEncoding = resp.Header.Peek("Content-Encoding")
 	if len(contentEncoding) < 1 {
@@ -59,7 +61,7 @@ func getResponseBody(resp *fasthttp.Response) ([]byte, error) {
 	if bytes.Equal(contentEncoding, []byte("deflate")) {
 		return resp.BodyInflate()
 	}
-	return nil, errors.New("unsupported response content encoding")
+	return nil, errEncodingNotSupported
 }
 
 var cacheVerifyMap = map[string]string{}
@@ -75,7 +77,7 @@ func verifyPeerCertFunc(Hostname string) func([][]byte, [][]*x509.Certificate) e
 			var err error
 			certs[i], err = x509.ParseCertificate(c)
 			if err != nil {
-				return errors.New("Cert parse failed: " + err.Error())
+				return err
 			}
 		}
 		opts := x509.VerifyOptions{

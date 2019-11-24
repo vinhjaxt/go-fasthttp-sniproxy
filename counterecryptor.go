@@ -19,6 +19,8 @@ type CounterEncryptorRand struct {
 	ix      int
 }
 
+var errNotSupported = errors.New("only RSA and ECDSA keys supported")
+
 func NewCounterEncryptorRandFromKey(key interface{}, seed []byte) (r CounterEncryptorRand, err error) {
 	var keyBytes []byte
 	switch key := key.(type) {
@@ -29,7 +31,7 @@ func NewCounterEncryptorRandFromKey(key interface{}, seed []byte) (r CounterEncr
 			return
 		}
 	default:
-		err = errors.New("only RSA and ECDSA keys supported")
+		err = errNotSupported
 		return
 	}
 	h := sha256.New()
