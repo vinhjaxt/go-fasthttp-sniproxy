@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -47,23 +48,18 @@ var httpClient = &fasthttp.Client{
 	},
 }
 
-func getDialer(dialerFunc *net.Dialer) func(addr string) (net.Conn, error) {
-	return func(addr string) (net.Conn, error) {
-		// no suitable address found => ipv6 can not dial to ipv4,..
-		hostname, port, err := net.SplitHostPort(addr)
-		if err != nil {
-			if err1, ok := err.(*net.AddrError); ok && strings.Index(err1.Err, "missing port") != -1 {
-				hostname, port, err = net.SplitHostPort(strings.TrimRight(addr, ":") + ":80")
-			}
-			if err != nil {
-				return nil, err
-			}
-		}
-		if port == "" || port == ":" {
-			port = "80"
-		}
-		return dialerFunc.Dial("tcp", "["+hostname+"]:"+port)
+func getResponseBody(resp *fasthttp.Response) ([]byte, error) {
+	var contentEncoding = resp.Header.Peek("Content-Encoding")
+	if len(contentEncoding) < 1 {
+		return resp.Body(), nil
 	}
+	if bytes.Equal(contentEncoding, []byte("gzip")) {
+		return resp.BodyGunzip()
+	}
+	if bytes.Equal(contentEncoding, []byte("deflate")) {
+		return resp.BodyInflate()
+	}
+	return nil, errors.New("unsupported response content encoding")
 }
 
 var cacheVerifyMap = map[string]string{}

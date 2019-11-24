@@ -24,20 +24,19 @@ import (
 var domainNameRegex = regexp.MustCompile(`^([a-zA-Z0-9_]{1}[a-zA-Z0-9_-]{0,62}){1}(\.[a-zA-Z0-9_]{1}[a-zA-Z0-9_-]{0,62})*[\._]?$`)
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-var dialerFunc = getDialer(&net.Dialer{
+var httpsDialer = &net.Dialer{
 	Timeout:   7 * time.Second,
 	KeepAlive: 5 * 60 * time.Second,
 	DualStack: true,
-})
+}
 
-func httpsHandler(ctx *fasthttp.RequestCtx, host, hostname string) error {
+func httpsHandler(ctx *fasthttp.RequestCtx, hostname, dialStr string) error {
 	var ioFrom net.Conn
-	destConn, err := dialerFunc(host)
+	destConn, err := httpsDialer.Dial("tcp", dialStr)
 	if err != nil {
 		return err
 	}
 	isMustProxify := mustProxify(hostname)
-	log.Println("Proxify:", hostname, isMustProxify)
 	if isMustProxify {
 		destConnTLS := tls.Client(destConn, &tls.Config{
 			InsecureSkipVerify:    true,
@@ -51,7 +50,7 @@ func httpsHandler(ctx *fasthttp.RequestCtx, host, hostname string) error {
 			// return err
 			log.Println("Dest handshake:", hostname, err)
 			// fallback
-			ioFrom, err = dialerFunc(host)
+			ioFrom, err = httpsDialer.Dial("tcp", dialStr)
 			if err != nil {
 				return err
 			}
@@ -101,6 +100,9 @@ func ioTransfer(destination io.WriteCloser, source io.ReadCloser) {
 	}
 }
 
+var cacheIPMapLock sync.RWMutex
+var cacheIPMap = map[string]string{}
+
 func requestHandler(ctx *fasthttp.RequestCtx) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -114,16 +116,16 @@ func requestHandler(ctx *fasthttp.RequestCtx) {
 	// log.Println(string(ctx.Path()), string(ctx.Host()), ctx.String(), "\r\n\r\n", ctx.Request.String())
 
 	host := string(ctx.Host())
-	if host == "" {
+	if len(host) < 1 {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		log.Println("Reject: Empty host")
 		return
 	}
 
-	hostname, _, err := net.SplitHostPort(host)
+	hostname, port, err := net.SplitHostPort(host)
 	if err != nil {
 		if err1, ok := err.(*net.AddrError); ok && strings.Index(err1.Err, "missing port") != -1 {
-			hostname, _, err = net.SplitHostPort(host + ":80")
+			hostname, port, err = net.SplitHostPort(host + ":80")
 		}
 		if err != nil {
 			ctx.SetStatusCode(fasthttp.StatusBadRequest)
@@ -132,32 +134,24 @@ func requestHandler(ctx *fasthttp.RequestCtx) {
 		}
 	}
 
-	if ip := net.ParseIP(hostname); ip != nil {
-		// if is ip
-		// log.Println("This is IP")
-		if isPrivateIP(ip) {
-			ctx.SetStatusCode(fasthttp.StatusBadRequest)
-			log.Println("Reject: Private IP", ip.String())
+	cacheIPMapLock.RLock()
+	ip, ok := cacheIPMap[host]
+	cacheIPMapLock.RUnlock()
+	if ok == false {
+		ip, err = getUsableIP(hostname, port)
+		if err != nil {
+			ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+			log.Println("No usable IP found:", host, err)
 			return
 		}
-	} else if domainNameRegex.MatchString(hostname) {
-		// if is domain
-		// log.Println("This is domain")
-		if strings.ToLower(hostname) == "localhost" {
-			ctx.SetStatusCode(fasthttp.StatusBadRequest)
-			log.Println("Reject: Localhost")
-			return
-		}
-	} else {
-		// invalid host
-		ctx.SetStatusCode(fasthttp.StatusBadRequest)
-		log.Println("Reject: Invalid host", host)
-		return
+		cacheIPMapLock.Lock()
+		cacheIPMap[host] = ip
+		cacheIPMapLock.Unlock()
 	}
 
 	// https connecttion
 	if bytes.Equal(ctx.Method(), []byte("CONNECT")) {
-		err = httpsHandler(ctx, host, hostname)
+		err = httpsHandler(ctx, hostname, "["+ip+"]:"+port)
 		if err != nil {
 			ctx.SetStatusCode(fasthttp.StatusInternalServerError)
 			log.Println("httpsHandler:", host, err)
@@ -167,8 +161,8 @@ func requestHandler(ctx *fasthttp.RequestCtx) {
 
 	err = httpClient.DoTimeout(&ctx.Request, &ctx.Response, 15*time.Second)
 	if err != nil {
-		log.Println("HTTPHandler:", host, err)
 		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+		log.Println("HTTPHandler:", host, err)
 	}
 }
 
@@ -179,6 +173,7 @@ var config struct {
 	domainList        string
 	domainRegexList   string
 	domainCertMapFile string
+	dnsEndpoint       string
 }
 
 var domainProxiesCache = map[string]bool{}
@@ -254,6 +249,7 @@ func mustProxify(hostname string) bool {
 	domainProxiesCacheLock.Lock()
 	domainProxiesCache[hostname] = b
 	domainProxiesCacheLock.Unlock()
+	log.Println("Proxify:", hostname, b)
 	return b
 }
 
@@ -264,8 +260,10 @@ func main() {
 	flag.StringVar(&config.domainList, "d", "domains.txt", "Domains List File")
 	flag.StringVar(&config.domainRegexList, "r", "domains-regex.txt", "Domains Regex List File")
 	flag.StringVar(&config.domainCertMapFile, "dcm", "domains-certs.json", "Domains Cert Map File")
-	log.Println("Config", config)
+	flag.StringVar(&config.dnsEndpoint, "dns", "https://1.0.0.1/dns-query", "DNS https enpoint")
 	flag.Parse()
+	dnsEndpointQs = config.dnsEndpoint + "?ct=application/dns-json&type=A&do=false&cd=false"
+	log.Println("Config", config)
 
 	if parseDomains() == false {
 		return
