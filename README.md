@@ -24,8 +24,8 @@ Do vậy, với nhu cầu, tình hình hiện tại, tôi đã nảy ra ý tư�
 ![image](https://user-images.githubusercontent.com/8877695/69479251-c040a280-0e2d-11ea-9564-f8cd757c1879.png)
 - Sử dụng cấu hình này
 - Truy cập trang web mà bạn muốn (sử dụng https:// )
-## Video hướng dẫn
-- updating
+## Hướng dẫn chi tiết
+- [Các bước sử dụng trên windows](https://github.com/vinhjaxt/go-fasthttp-sniproxy/issues/1)
 
 # Thông tin thêm
 - Vì thay đổi SNI nên cert của trang web trả về đôi khi sẽ không đúng với tên miền ta cần, nên bạn có thể thay đổi file `domains-certs.json` để định nghĩa các alias domain cho việc verify
