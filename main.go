@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
-	"errors"
 	"flag"
 	"io"
 	"io/ioutil"
@@ -61,7 +60,7 @@ func httpsHandler(ctx *fasthttp.RequestCtx, hostname, dialStr string) error {
 	}
 
 	if ctx.Hijacked() {
-		return errors.New(hostname + " hijacked")
+		return nil
 	}
 	ctx.SetStatusCode(fasthttp.StatusOK)
 	ctx.Response.Header.Set("Connection", "keep-alive")
@@ -141,7 +140,7 @@ func requestHandler(ctx *fasthttp.RequestCtx) {
 		ip, err = getUsableIP(hostname, port)
 		if err != nil {
 			ctx.SetStatusCode(fasthttp.StatusInternalServerError)
-			log.Println("No usable IP found:", host, err)
+			log.Println("No usable IP:", host, err)
 			return
 		}
 		cacheIPMapLock.Lock()
@@ -162,7 +161,7 @@ func requestHandler(ctx *fasthttp.RequestCtx) {
 	err = httpClient.DoTimeout(&ctx.Request, &ctx.Response, 15*time.Second)
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
-		log.Println("HTTPHandler:", host, err)
+		log.Println("httpHandler:", host, err)
 	}
 }
 
