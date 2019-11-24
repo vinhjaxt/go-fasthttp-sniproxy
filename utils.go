@@ -26,6 +26,8 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
+var httpClientTimeout = 15 * time.Second
+var dialTimeout = 7 * time.Second
 var httpClient = &fasthttp.Client{
 	ReadTimeout:         30 * time.Second,
 	MaxConnsPerHost:     233,
@@ -45,7 +47,7 @@ var httpClient = &fasthttp.Client{
 		if port == "" || port == ":" {
 			port = "80"
 		}
-		return fasthttp.DialDualStackTimeout("["+hostname+"]:"+port, 7*time.Second)
+		return fasthttp.DialDualStackTimeout("["+hostname+"]:"+port, dialTimeout)
 	},
 }
 

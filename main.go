@@ -31,7 +31,7 @@ var uncatchRecover = func() {
 
 func httpsHandler(ctx *fasthttp.RequestCtx, hostname, dialStr string) error {
 	var ioFrom net.Conn
-	destConn, err := fasthttp.DialDualStackTimeout(dialStr, 7*time.Second)
+	destConn, err := fasthttp.DialDualStackTimeout(dialStr, dialTimeout)
 	if err != nil {
 		return err
 	}
@@ -49,7 +49,7 @@ func httpsHandler(ctx *fasthttp.RequestCtx, hostname, dialStr string) error {
 			// return err
 			log.Println("Remote handshake:", hostname, err)
 			// fallback
-			ioFrom, err = fasthttp.DialDualStackTimeout(dialStr, 7*time.Second)
+			ioFrom, err = fasthttp.DialDualStackTimeout(dialStr, dialTimeout)
 			if err != nil {
 				return err
 			}
@@ -156,7 +156,7 @@ func requestHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	err = httpClient.DoTimeout(&ctx.Request, &ctx.Response, 15*time.Second)
+	err = httpClient.DoTimeout(&ctx.Request, &ctx.Response, httpClientTimeout)
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
 		log.Println("httpHandler:", host, err)

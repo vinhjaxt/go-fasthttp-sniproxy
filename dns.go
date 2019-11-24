@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"net"
-	"time"
 
 	"github.com/tidwall/gjson"
 	"github.com/valyala/fasthttp"
@@ -26,7 +25,7 @@ func getUsableIP(hostname, port string) (string, error) {
 	req.SetRequestURI(dnsEndpointQs)
 	req.URI().QueryArgs().Set("name", hostname)
 	resp := fasthttp.AcquireResponse()
-	err := httpClient.DoTimeout(req, resp, 5*time.Second)
+	err := httpClient.DoTimeout(req, resp, httpClientTimeout)
 	fasthttp.ReleaseRequest(req)
 	if err != nil {
 		fasthttp.ReleaseResponse(resp)
@@ -46,7 +45,7 @@ func getUsableIP(hostname, port string) (string, error) {
 		if ipp := net.ParseIP(ip); ipp == nil || isPrivateIP(ipp) {
 			continue
 		}
-		conn, err := fasthttp.DialDualStackTimeout("["+ip+"]:"+port, 5*time.Second)
+		conn, err := fasthttp.DialDualStackTimeout("["+ip+"]:"+port, dialTimeout)
 		if err == nil {
 			conn.Close()
 			return ip, nil
