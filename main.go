@@ -29,9 +29,10 @@ var uncatchRecover = func() {
 	}
 }
 
-func httpsHandler(ctx *fasthttp.RequestCtx, hostname, dialStr string) error {
+func httpsHandler(ctx *fasthttp.RequestCtx, hostname string, tcpAddr *net.TCPAddr) error {
 	var ioFrom net.Conn
-	destConn, err := fasthttp.DialDualStackTimeout(dialStr, dialTimeout)
+
+	destConn, err := net.DialTCP("tcp4", nil, tcpAddr)
 	if err != nil {
 		return err
 	}
@@ -49,7 +50,7 @@ func httpsHandler(ctx *fasthttp.RequestCtx, hostname, dialStr string) error {
 			// return err
 			log.Println("Remote handshake:", hostname, err)
 			// fallback
-			ioFrom, err = fasthttp.DialDualStackTimeout(dialStr, dialTimeout)
+			ioFrom, err = net.DialTCP("tcp4", nil, tcpAddr)
 			if err != nil {
 				return err
 			}
@@ -101,8 +102,8 @@ func ioTransfer(destination io.WriteCloser, source io.ReadCloser) {
 	}
 }
 
-var cacheIPMapLock sync.RWMutex
-var cacheIPMap = map[string]string{}
+var cacheAddrMapLock sync.RWMutex
+var cacheTCPAddrMap = map[string]*net.TCPAddr{}
 
 func requestHandler(ctx *fasthttp.RequestCtx) {
 	defer uncatchRecover()
@@ -131,24 +132,24 @@ func requestHandler(ctx *fasthttp.RequestCtx) {
 		}
 	}
 
-	cacheIPMapLock.RLock()
-	ip, ok := cacheIPMap[host]
-	cacheIPMapLock.RUnlock()
+	cacheAddrMapLock.RLock()
+	tcpAddr, ok := cacheTCPAddrMap[host]
+	cacheAddrMapLock.RUnlock()
 	if ok == false {
-		ip, err = getUsableIP(hostname, port)
+		tcpAddr, err = getUsableIP(hostname, port)
 		if err != nil {
 			ctx.SetStatusCode(fasthttp.StatusInternalServerError)
 			log.Println("No usable IP:", host, err)
 			return
 		}
-		cacheIPMapLock.Lock()
-		cacheIPMap[host] = ip
-		cacheIPMapLock.Unlock()
+		cacheAddrMapLock.Lock()
+		cacheTCPAddrMap[host] = tcpAddr
+		cacheAddrMapLock.Unlock()
 	}
 
 	// https connecttion
 	if bytes.Equal(ctx.Method(), []byte("CONNECT")) {
-		err = httpsHandler(ctx, hostname, "["+ip+"]:"+port)
+		err = httpsHandler(ctx, hostname, tcpAddr)
 		if err != nil {
 			ctx.SetStatusCode(fasthttp.StatusInternalServerError)
 			log.Println("httpsHandler:", host, err)

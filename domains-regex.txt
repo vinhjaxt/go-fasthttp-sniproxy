@@ -9,6 +9,8 @@
 ^discordapp.com$
 ^gateway\.discord\.gg$
 \.gateway\.discord\.gg$
+\.discordapp\.net$
+^discordapp\.net$
 
 # MS Office
 \.office\.com$
