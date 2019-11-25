@@ -186,7 +186,7 @@ func parseDomains() bool {
 			lines := lineRegex.Split(string(c), -1)
 			for _, line := range lines {
 				line = strings.Trim(line, "\r\n\t ")
-				if len(line) < 1 {
+				if len(line) < 1 || line[0] == '#' {
 					continue
 				}
 				domainProxiesCacheLock.Lock()
@@ -203,7 +203,7 @@ func parseDomains() bool {
 			lines := lineRegex.Split(string(c), -1)
 			for _, line := range lines {
 				line = strings.Trim(line, "\r\n\t ")
-				if len(line) < 1 {
+				if len(line) < 1 || line[0] == '#' {
 					continue
 				}
 				domainsRegex = append(domainsRegex, regexp.MustCompile(line))

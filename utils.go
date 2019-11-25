@@ -181,11 +181,11 @@ func TLSConfigFromCA(ca *tls.Certificate, hostname string) (*tls.Config, error) 
 		if err != nil {
 			return nil, err
 		}
+		certCacheLock.Lock()
 		for _, key = range hostnames {
-			certCacheLock.Lock()
 			certCache[key] = cert
-			certCacheLock.Unlock()
 		}
+		certCacheLock.Unlock()
 	}
 	config.Certificates = append(config.Certificates, *cert)
 	return &config, nil

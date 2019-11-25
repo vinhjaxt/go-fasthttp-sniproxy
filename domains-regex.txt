@@ -1,4 +1,11 @@
+# Separate by line
+
+# Telegram
 \.telegram\.org$
 ^telegram\.org$
-.
 
+# Discord
+\.discordapp\.com$
+^discordapp.com$
+^gateway\.discord\.gg$
+\.gateway\.discord\.gg$
