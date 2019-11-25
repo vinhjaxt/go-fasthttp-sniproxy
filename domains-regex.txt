@@ -9,3 +9,7 @@
 ^discordapp.com$
 ^gateway\.discord\.gg$
 \.gateway\.discord\.gg$
+
+# MS Office
+\.office\.com$
+^office\.com$
