@@ -15,3 +15,7 @@
 # MS Office
 \.office\.com$
 ^office\.com$
+
+# Zalo
+\.zalo\.me$
+^\.zalo\.me$

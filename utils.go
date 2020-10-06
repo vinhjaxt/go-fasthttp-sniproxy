@@ -111,22 +111,32 @@ func verifyPeerCertFunc(Hostname string) func([][]byte, [][]*x509.Certificate) e
 			}
 		}
 
-		aliasDomains, ok := certDomainAliasMap[Hostname]
+		aliasDomain, ok := findVerifyAlias(Hostname)
 		if ok {
-			for _, d = range aliasDomains {
-				opts.DNSName = d
-				_, err = cert.Verify(opts)
-				if err == nil {
-					cacheVerifyMapLock.Lock()
-					cacheVerifyMap[Hostname] = d
-					cacheVerifyMapLock.Unlock()
-					return nil
-				}
+			opts.DNSName = aliasDomain
+			_, err = cert.Verify(opts)
+			if err == nil {
+				cacheVerifyMapLock.Lock()
+				cacheVerifyMap[Hostname] = d
+				cacheVerifyMapLock.Unlock()
+				return nil
 			}
 		}
 		log.Printf("Cert invalid: Remote certificate is for %s, not %s\n", cert.DNSNames, Hostname)
 		return err
 	}
+}
+
+func findVerifyAlias(Hostname string) (alias string, ok bool) {
+	for _, v := range domainsAlias {
+		if strings.HasSuffix(Hostname, v.Base) || Hostname == v.Base[1:] {
+			alias = v.Alias
+			ok = true
+			return
+		}
+	}
+	ok = false
+	return
 }
 
 // from goproxy

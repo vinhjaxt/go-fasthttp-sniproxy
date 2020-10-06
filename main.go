@@ -174,11 +174,16 @@ var config struct {
 	dnsEndpoint       string
 }
 
+type DomainAlias struct {
+	Base  string
+	Alias string
+}
+
 var domainProxiesCache = map[string]bool{}
 var domainProxiesCacheLock sync.RWMutex
 var domainsRegex []*regexp.Regexp
 var lineRegex = regexp.MustCompile(`[\r\n]+`)
-var certDomainAliasMap = map[string][]string{}
+var domainsAlias []*DomainAlias
 
 func parseDomains() bool {
 	if len(config.domainList) > 0 {
@@ -214,11 +219,25 @@ func parseDomains() bool {
 		}
 	}
 	if len(config.domainCertMapFile) > 0 {
+		var certDomainAliasMap = map[string]string{}
 		c, err := ioutil.ReadFile(config.domainCertMapFile)
 		if err == nil {
 			err = json.Unmarshal(c, &certDomainAliasMap)
 		}
-		if err != nil {
+		if err == nil {
+			for k, v := range certDomainAliasMap {
+				if len(k) > 1 && k[0] == '*' {
+					domainsAlias = append(domainsAlias, &DomainAlias{
+						Base:  k[1:],
+						Alias: v,
+					})
+				} else {
+					cacheVerifyMapLock.Lock()
+					cacheVerifyMap[k] = v
+					cacheVerifyMapLock.Unlock()
+				}
+			}
+		} else {
 			log.Println(err)
 		}
 	}

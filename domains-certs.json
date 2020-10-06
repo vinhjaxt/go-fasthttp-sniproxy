@@ -1,4 +1,6 @@
 {
-  "flora.web.telegram.org": ["telesco.pe"],
-  "vesta-1.web.telegram.org": ["telegram.org"]
+  "flora.web.telegram.org": "telesco.pe",
+  "vesta-1.web.telegram.org": "telegram.org",
+  "*.chat.zalo.me":"zalo.me",
+  "id.zalo.me":"baomoi.com"
 }
